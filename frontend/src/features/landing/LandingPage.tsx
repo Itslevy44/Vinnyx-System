@@ -234,7 +234,9 @@ export const LandingPage: React.FC = () => {
                       </p>
                       <div className="pt-2 flex flex-col sm:flex-row justify-center gap-2">
                         <a
-                          href={`https://wa.me/254750280280?text=Hello%20Vinnyx,%20I%20have%20submitted%20request%20${submittedRef}`}
+                          href={`https://wa.me/254750280280?text=${encodeURIComponent(
+                            `Hello Vinnyx, I have submitted request ${submittedRef}`
+                          )}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="px-4 py-2 rounded-xl bg-green-600 hover:bg-green-700 text-white font-bold text-xs inline-flex items-center justify-center gap-1.5"

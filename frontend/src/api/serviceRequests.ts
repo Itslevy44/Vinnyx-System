@@ -68,6 +68,11 @@ function getLocal(): ServiceRequest[] {
   }
 }
 
+function cleanInput(str?: string): string {
+  if (!str) return ''
+  return str.trim().replace(/[<>]/g, '')
+}
+
 function saveLocal(items: ServiceRequest[]) {
   localStorage.setItem(LOCAL_REQUESTS_KEY, JSON.stringify(items))
 }
@@ -91,10 +96,17 @@ export const serviceRequestsApi = {
   },
 
   async submitPublicRequest(data: Omit<ServiceRequest, 'id' | 'request_number' | 'created_at' | 'status'>): Promise<ServiceRequest> {
+    const sanitizedData = {
+      ...data,
+      customer_name: cleanInput(data.customer_name),
+      customer_phone: cleanInput(data.customer_phone),
+      description: cleanInput(data.description),
+      customer_email: data.customer_email ? cleanInput(data.customer_email) : undefined,
+    }
     try {
       return await request<ServiceRequest>('/public/service-requests', {
         method: 'POST',
-        body: JSON.stringify(data),
+        body: JSON.stringify(sanitizedData),
       })
     } catch {
       const items = getLocal()
@@ -103,7 +115,7 @@ export const serviceRequestsApi = {
         request_number: 'REQ-2026-' + Math.floor(100 + Math.random() * 900),
         status: 'new',
         created_at: new Date().toISOString(),
-        ...data,
+        ...sanitizedData,
       }
       saveLocal([newReq, ...items])
       return newReq

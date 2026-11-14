@@ -28,7 +28,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState<boolean>(true)
 
   useEffect(() => {
-    setIsLoading(false)
+    let isMounted = true
+
+    const verifySession = async () => {
+      const storedToken = localStorage.getItem('vinnyx_token')
+      if (storedToken) {
+        try {
+          const verifiedUser = await authApi.getMe()
+          if (isMounted) {
+            setUser(verifiedUser)
+            localStorage.setItem('vinnyx_user', JSON.stringify(verifiedUser))
+          }
+        } catch {
+          // Token is invalid/revoked or verification failed
+          if (isMounted) {
+            localStorage.removeItem('vinnyx_token')
+            localStorage.removeItem('vinnyx_user')
+            setUser(null)
+            setToken(null)
+          }
+        }
+      } else {
+        if (isMounted) {
+          setUser(null)
+        }
+      }
+      if (isMounted) {
+        setIsLoading(false)
+      }
+    }
+
+    verifySession()
+
+    const handleUnauthorized = () => {
+      setUser(null)
+      setToken(null)
+    }
+
+    window.addEventListener('vinnyx:unauthorized', handleUnauthorized)
+    return () => {
+      isMounted = false
+      window.removeEventListener('vinnyx:unauthorized', handleUnauthorized)
+    }
   }, [])
 
   const loginWithPassword = async (identifier: string, pass: string) => {

@@ -63,6 +63,15 @@ export async function request<T = any>(
     const payload = isJson ? await res.json() : await res.text()
 
     if (!res.ok) {
+      if (res.status === 401) {
+        // Clear invalid/expired credentials and notify auth context
+        localStorage.removeItem('vinnyx_token')
+        localStorage.removeItem('vinnyx_user')
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new Event('vinnyx:unauthorized'))
+        }
+      }
+
       const message =
         payload?.error?.message ||
         payload?.message ||
