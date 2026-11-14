@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+**/node_modules/
+vendor/
+**/vendor/
+
+# Build outputs
+dist/
+**/dist/
+dist-ssr/
+public/build/
+public/hot/
+public/storage/
+
+# Environment and sensitive keys
+.env
+.env.backup
+.env.production
+*.local
+auth.json
+*.key
+
+# Framework caches
+storage/*.key
+storage/pail/
+.phpunit.cache/
+.phpunit.result.cache
+
+# Editor & Tooling
+.kilo/
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
