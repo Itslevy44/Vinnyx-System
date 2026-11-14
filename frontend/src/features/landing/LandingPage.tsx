@@ -453,8 +453,8 @@ export const LandingPage: React.FC = () => {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-blue-900/80 to-transparent flex items-end p-6">
                 <div className="text-white">
-                  <span className="font-bold text-xs uppercase text-blue-200 block">Tellers 10 & 11 Station</span>
-                  <h3 className="font-extrabold text-lg">Bomet Certified Electronics Lab</h3>
+                  <span className="font-bold text-xs uppercase text-blue-200 block">Repair desk</span>
+                  <h3 className="font-extrabold text-lg">Estwing repair lab</h3>
                 </div>
               </div>
             </div>

@@ -30,6 +30,7 @@ export const LoginPage: React.FC = () => {
   // Customer registration fields
   const [regName, setRegName] = useState('')
   const [regPhone, setRegPhone] = useState('')
+  const [regEmail, setRegEmail] = useState('')
 
   // Form fields
   const [identifier, setIdentifier] = useState('')
@@ -72,11 +73,17 @@ export const LoginPage: React.FC = () => {
       return
     }
 
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters long.')
+      return
+    }
+
     setIsLoading(true)
     try {
       await registerCustomer({
         name: regName.trim(),
         phone: regPhone.trim(),
+        email: regEmail.trim() || undefined,
         password,
       })
       navigate('/customer/dashboard')
@@ -114,7 +121,6 @@ export const LoginPage: React.FC = () => {
           <Building2 className="h-8 w-8" />
         </div>
         <h2 className="text-3xl font-extrabold tracking-tight text-gray-900">Vinnyx Technologies</h2>
-        <p className="mt-1 text-xs text-slate-600">Point of Sale, Repairs & Customer Portal</p>
       </div>
 
       <div className="mt-6 sm:mx-auto sm:w-full sm:max-w-md px-4 sm:px-0">
@@ -190,7 +196,7 @@ export const LoginPage: React.FC = () => {
             </CardTitle>
             <CardDescription className="text-gray-500">
               {userType === 'staff'
-                ? 'Authorized tellers, repair technicians, and managers'
+                ? ''
                 : 'Track your print jobs, repair tickets, and past receipts'}
             </CardDescription>
           </CardHeader>
@@ -247,7 +253,16 @@ export const LoginPage: React.FC = () => {
                 />
 
                 <Input
-                  label="Create Password"
+                  label="Email Address (Optional)"
+                  type="email"
+                  placeholder="e.g. name@example.com"
+                  value={regEmail}
+                  onChange={(e) => setRegEmail(e.target.value)}
+                  icon={<Mail className="h-4 w-4" />}
+                />
+
+                <Input
+                  label="Create Password (Min. 8 characters)"
                   type="password"
                   placeholder="••••••••"
                   value={password}

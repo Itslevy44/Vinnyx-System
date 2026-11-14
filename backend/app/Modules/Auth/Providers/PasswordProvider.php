@@ -81,9 +81,15 @@ class PasswordProvider implements AuthProvider
         }
 
         // Find existing user by email or phone
-        $user = User::where('email', $identity->email)
-            ->orWhere('phone', $identity->phone)
-            ->first();
+        $query = User::query();
+        if ($identity->email && $identity->phone) {
+            $query->where('email', $identity->email)->orWhere('phone', $identity->phone);
+        } elseif ($identity->email) {
+            $query->where('email', $identity->email);
+        } else {
+            $query->where('phone', $identity->phone);
+        }
+        $user = $query->first();
 
         if (! $user) {
             $user = User::create([
