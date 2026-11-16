@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/lib/AuthContext'
 import { salesApi } from '@/api/sales'
@@ -8,6 +8,7 @@ import type { Sale, RepairTicket, ServiceRequest } from '@/types'
 import { Button } from '@/components/ui/Button'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
+import { Dialog } from '@/components/ui/Dialog'
 import { formatKES, formatDate } from '@/lib/utils'
 import {
   ShoppingBag,
@@ -18,6 +19,10 @@ import {
   Laptop,
   Wrench,
   Inbox,
+  CheckCircle2,
+  User as UserIcon,
+  Phone,
+  Send,
 } from 'lucide-react'
 
 function normalizePhone(phone?: string | null): string {
@@ -38,7 +43,17 @@ export const CustomerDashboard: React.FC = () => {
   const [requests, setRequests] = useState<ServiceRequest[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(true)
 
-  useEffect(() => {
+  // Service Request Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [customerName, setCustomerName] = useState('')
+  const [customerPhone, setCustomerPhone] = useState('')
+  const [category, setCategory] = useState<'cyber_gov' | 'printing' | 'design' | 'eulogy' | 'repair' | 'other'>('cyber_gov')
+  const [urgency, setUrgency] = useState<'normal' | 'urgent'>('normal')
+  const [description, setDescription] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submittedRef, setSubmittedRef] = useState<string | null>(null)
+
+  const loadCustomerData = useCallback(() => {
     if (!user) return
     const userPhoneNorm = normalizePhone(user.phone)
     const userNameNorm = user.name?.trim().toLowerCase()
@@ -77,6 +92,41 @@ export const CustomerDashboard: React.FC = () => {
         setIsLoading(false)
       })
   }, [user])
+
+  useEffect(() => {
+    loadCustomerData()
+  }, [loadCustomerData])
+
+  const openRequestModal = (initialCategory?: typeof category) => {
+    setCustomerName(user?.name || '')
+    setCustomerPhone(user?.phone || '')
+    setCategory(initialCategory || 'cyber_gov')
+    setUrgency('normal')
+    setDescription('')
+    setSubmittedRef(null)
+    setIsModalOpen(true)
+  }
+
+  const handleSubmitRequest = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!customerName.trim() || !customerPhone.trim() || !description.trim()) return
+
+    setIsSubmitting(true)
+    try {
+      const req = await serviceRequestsApi.submitPublicRequest({
+        customer_name: customerName.trim(),
+        customer_phone: customerPhone.trim(),
+        service_category: category,
+        urgency,
+        description: description.trim(),
+      })
+      setSubmittedRef(req.request_number)
+      // Refresh the customer's records so the new request appears immediately
+      loadCustomerData()
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
@@ -138,11 +188,13 @@ export const CustomerDashboard: React.FC = () => {
                 <ShoppingBag className="h-4 w-4 mr-1.5" /> Visit Shop
               </Button>
             </Link>
-            <Link to="/#request-service">
-              <Button variant="primary" size="sm">
-                <Plus className="h-4 w-4 mr-1.5" /> New Service Request
-              </Button>
-            </Link>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => openRequestModal('cyber_gov')}
+            >
+              <Plus className="h-4 w-4 mr-1.5" /> New Service Request
+            </Button>
           </div>
         </div>
 
@@ -257,11 +309,13 @@ export const CustomerDashboard: React.FC = () => {
                       You have no laptops, desktops, or printers currently checked into our hardware repairs lab.
                     </p>
                     <div className="pt-2">
-                      <Link to="/#request-service">
-                        <Button variant="primary" size="sm">
-                          <Plus className="h-4 w-4 mr-1.5" /> Book a Hardware Repair
-                        </Button>
-                      </Link>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => openRequestModal('repair')}
+                      >
+                        <Plus className="h-4 w-4 mr-1.5" /> Book a Hardware Repair
+                      </Button>
                     </div>
                   </div>
                 ) : (
@@ -335,11 +389,13 @@ export const CustomerDashboard: React.FC = () => {
                       Need help with government portals (KRA, NTSA, HELB), printing, typesetting, or design? Submit a request and our on-duty tellers will attend to it.
                     </p>
                     <div className="pt-2">
-                      <Link to="/#request-service">
-                        <Button variant="primary" size="sm">
-                          <Plus className="h-4 w-4 mr-1.5" /> Submit New Service Request
-                        </Button>
-                      </Link>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => openRequestModal('cyber_gov')}
+                      >
+                        <Plus className="h-4 w-4 mr-1.5" /> Submit New Service Request
+                      </Button>
                     </div>
                   </div>
                 ) : (
@@ -388,6 +444,167 @@ export const CustomerDashboard: React.FC = () => {
           </>
         )}
       </main>
+
+      {/* Direct Service & Repair Request Modal */}
+      <Dialog
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false)
+          setSubmittedRef(null)
+        }}
+        title={submittedRef ? undefined : 'Submit a Service or Repair Request'}
+        description={
+          submittedRef
+            ? undefined
+            : 'Fill in your request below. Our on-duty tellers in Bomet CBD will review and get in touch immediately.'
+        }
+        maxWidth="lg"
+      >
+        {submittedRef ? (
+          <div className="text-center py-6 space-y-4">
+            <div className="h-14 w-14 rounded-full bg-green-50 text-green-600 border border-green-200 flex items-center justify-center mx-auto">
+              <CheckCircle2 className="h-8 w-8" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900">
+              Request Received Successfully!
+            </h3>
+            <p className="text-xs text-gray-600 max-w-md mx-auto">
+              Your tracking reference is{' '}
+              <strong className="text-blue-600 font-mono text-sm">{submittedRef}</strong>.
+              Our on-duty tellers are attending to it right now at our Bomet CBD counter.
+            </p>
+            <div className="pt-2 flex flex-col sm:flex-row justify-center gap-3">
+              <a
+                href={`https://wa.me/254750280280?text=${encodeURIComponent(
+                  `Hello Vinnyx, I have submitted request ${submittedRef}`
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-4 py-2.5 rounded-xl bg-green-600 hover:bg-green-700 text-white font-bold text-xs inline-flex items-center justify-center gap-2 shadow-sm"
+              >
+                <MessageCircle className="h-4 w-4" /> Message on WhatsApp
+              </a>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setIsModalOpen(false)
+                  setSubmittedRef(null)
+                  setActiveTab(category === 'repair' ? 'repairs' : 'requests')
+                }}
+              >
+                View in My Dashboard
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmitRequest} className="space-y-4 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block font-bold text-gray-700 mb-1">
+                  Your Full Name *
+                </label>
+                <div className="relative">
+                  <UserIcon className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="e.g. Kiprono Cheruiyot"
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-xs"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-gray-700 mb-1">
+                  Phone Number *
+                </label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                  <input
+                    type="tel"
+                    placeholder="0712 345 678"
+                    value={customerPhone}
+                    onChange={(e) => setCustomerPhone(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-xs"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block font-bold text-gray-700 mb-1">
+                  Select Service Category
+                </label>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value as any)}
+                  className="w-full py-2 px-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs font-medium"
+                >
+                  <option value="cyber_gov">Government Portals (KRA, NTSA, HELB)</option>
+                  <option value="printing">Printing & Photocopy (Color / B&W)</option>
+                  <option value="design">Graphic Design, Posters & Cards</option>
+                  <option value="eulogy">Eulogy Booklet Printing & Design</option>
+                  <option value="repair">Computer / Laptop / Printer Repair</option>
+                  <option value="other">Bulk Stationery / School Supplies</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-gray-700 mb-1">
+                  Urgency
+                </label>
+                <select
+                  value={urgency}
+                  onChange={(e) => setUrgency(e.target.value as any)}
+                  className="w-full py-2 px-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs font-medium"
+                >
+                  <option value="normal">Standard Service</option>
+                  <option value="urgent">Express / Urgent (Within Today)</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block font-bold text-gray-700 mb-1">
+                Describe What You Need *
+              </label>
+              <textarea
+                rows={3}
+                placeholder="e.g. Laptop won't power on, or need 200 copies of eulogy booklets printed on glossy paper..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-xs"
+                required
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsModalOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                isLoading={isSubmitting}
+                className="font-bold"
+              >
+                <Send className="h-4 w-4 mr-1.5" /> Submit Request
+              </Button>
+            </div>
+          </form>
+        )}
+      </Dialog>
 
       {/* Customer Portal Footer */}
       <footer className="bg-white border-t border-gray-200 py-6 mt-auto">
